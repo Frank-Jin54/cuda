@@ -60,10 +60,12 @@ void reduce(float * d_out, float * d_intermediate, float * d_in, int size, bool 
 
 	if (useSharedMemory)
 	{
+		printf("implement shared memory kernel");
 		share_mem_reduce_kernel<<<blocks, threads, threads * sizeof(float)>>>(d_intermediate, d_in);
 	}
 	else
 	{
+		printf("implement global memory kernel");
 		global_memory_reduce_kernel<<<blocks, threads, threads * sizeof(float)>>>(d_out, d_intermediate);
 	}
 }
