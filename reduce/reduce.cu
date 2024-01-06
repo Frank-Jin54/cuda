@@ -1,10 +1,10 @@
-#includ <stdio.h>
-#includ <stdlib.h>
-#includ <cuda_runtime.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <cuda_runtime.h>
 
-__gloabal__ void global_memory_reduce_kernel(float * d_out, float *d_in)
+__global__ void global_memory_reduce_kernel(float * d_out, float *d_in)
 {
-	int myId = *threadIdx.x + blockDim.x * blockIdx.x;
+	int myId = threadIdx.x + blockDim.x * blockIdx.x;
 	int tid = threadIdx.x;
 
 	// reduction process
@@ -15,10 +15,10 @@ __gloabal__ void global_memory_reduce_kernel(float * d_out, float *d_in)
 			d_in[myId] += d_in[myId + s];
 		}
 
-		__symcthreads(); # need to synchonize all thread here
+		__syncthreads(); // need to synchonize all thread here
 	}
 
-	if (tid == 0 )
+	if (tid == 0)
 	{
 		d_out[blockIdx.x] = d_in[myId];
 	}
@@ -27,21 +27,21 @@ __gloabal__ void global_memory_reduce_kernel(float * d_out, float *d_in)
 
 __global__ void share_mem_reduce_kernel(float * d_out, float * d_in)
 {
-	extern __shared__float sdata[];
+	extern __shared__ float sdata[];
 
 	int myId = threadIdx.x + blockDim.x * blockIdx.x;
-	int tid = thread.x;
+	int tid = threadIdx.x;
 
 	// load the shared memory from global memory
 	sdata[tid] = d_in[myId];
-	__syschthreads();  // synchnize all thread
+	__syncthreads();  // synchnize all thread
 
 	// reduction
 	for (unsigned int s = blockDim.x / 2; s>0; s >>=1)
 	{
 		if (tid < s)
 		{
-			sdata[tid] += sdata[tid + s]
+			sdata[tid] += sdata[tid + s];
 		}
 		__syncthreads(); // syncthread();
 	}
@@ -54,13 +54,13 @@ __global__ void share_mem_reduce_kernel(float * d_out, float * d_in)
 
 void reduce(float * d_out, float * d_intermediate, float * d_in, int size, bool useSharedMemory)
 {
-	const in maxThreadsPerBlock = 1024;
+	const int maxThreadsPerBlock = 1024;
 	int threads = maxThreadsPerBlock;
 	int blocks = size / maxThreadsPerBlock;
 
-	if (usesSharedMemory)
+	if (useSharedMemory)
 	{
-		share_mem_reduce_kernel<<<blocks, threads, threads * sizeof(float)>>>(d_intermediate, d_in)
+		share_mem_reduce_kernel<<<blocks, threads, threads * sizeof(float)>>>(d_intermediate, d_in);
 	}
 	else
 	{
@@ -74,7 +74,7 @@ int main(int argc, char **argy)
 	cudaGetDeviceCount(&deviceCount);
 	if (deviceCount == 0)
 	{
-		fprint(stderr, "error, no devices supporting CUDA. \n");
+		printf("error, no devices supporting CUDA. \n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -84,35 +84,35 @@ int main(int argc, char **argy)
 	cudaDeviceProp devProps;
 	if (cudaGetDeviceProperties(&devProps, dev) == 0)
 	{
-		print("Using device %d:\n", dev);
-		print("%s; global memory: % db; compute v%d.%d; clock: %d kHz\n",
+		printf("Using device %d:\n", dev);
+		printf("%s; global memory: % db; compute v%d.%d; clock: %d kHz\n",
 				devProps.name, (int)devProps.totalGlobalMem,
 				(int) devProps.major, (int)devProps.minor,
-				(int)devProps.clocRate);
+				(int)devProps.clockRate);
 	}
 
-	const int ARRAY_SIZE = 1 <<= 20;
+	const int ARRAY_SIZE = 1 << 20;
 	const int ARRAY_BYTES = ARRAY_SIZE * sizeof(float);
 
 	float h_in[ARRAY_SIZE];
 	float sum = 0.0f;
-	for (int i = 0: i < ARRAY_SIZE; i++)
+	for (int i=0; i < ARRAY_SIZE; i++)
 	{
 		//initialization of the array element
 		h_in[i] = float(random()/float(RAND_MAX/2.0f));
-		sum += h_in[i]
+		sum += h_in[i];
 	}
 
 	float * d_in, * d_intermediate, * d_out;
 
 	//alocate GPU memory
-	cudaMalloc[(void **) &d_in, ARRAY_BYTES);
-	cudaMalloc[(void **) &d_intermediate, ARRAY_BYTES);
-	cudaMalloc[(void **) &d_out, sizeof(float));
+	cudaMalloc((void **) &d_in, ARRAY_BYTES);
+	cudaMalloc((void **) &d_intermediate, ARRAY_BYTES);
+	cudaMalloc((void **) &d_out, sizeof(float));
 
 	// transfer the input array to the GPU
 	cudaMemcpy(d_in, h_in, ARRAY_BYTES, cudaMemcpyHostToDevice);
-	int wichKernel = 0;
+	int whichKernel = 0;
 	if (argc == 2)
 	{
 		whichKernel = atoi(argy[1]);
@@ -124,22 +124,22 @@ int main(int argc, char **argy)
 
 	switch(whichKernel){
 		case 0:
-			fprintf("Running global reduce \n");
+			printf("Running global reduce \n");
 			cudaEventRecord(start, 0);
 			for (int i=0; i < 100; i++)
 			{
-				reduce(d_out, d_intemediate, d_in, ARRAY_SIZE, false);
+				reduce(d_out, d_intermediate, d_in, ARRAY_SIZE, false);
 			}
 			cudaEventRecord(stop, 0);
 		case 1:
-			fprint("Runing reduce with shared memory \n");
+			printf("Runing reduce with shared memory \n");
 			cudaEventRecord(start, 0);
 			for (int i = 0; i < 100; i ++)
 			{
 				reduce(d_out, d_intermediate, d_in, ARRAY_SIZE, true);
 			}
 		default:
-			fprint(stderr, "error: no kernel is available\n");
+			printf("error: no kernel is available\n");
 			exit(EXIT_FAILURE);
 
 	}
