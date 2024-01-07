@@ -25,7 +25,7 @@ __global__ void global_memory_reduce_kernel(float * d_out, float *d_in)
 
 }
 
-__global__ void share_mem_reduce_kernel(float * d_out, float * d_in)
+__global__ void share_memory_reduce_kernel(float * d_out, float * d_in)
 {
 	extern __shared__ float sdata[];
 
@@ -60,15 +60,26 @@ void reduce(float * d_out, float * d_intermediate, float * d_in, int size, bool 
 
 	if (useSharedMemory)
 	{
-		printf("implement shared memory kernel");
-		share_mem_reduce_kernel<<<blocks, threads, threads * sizeof(float)>>>(d_intermediate, d_in);
+		share_memory_reduce_kernel<<<blocks, threads, threads * sizeof(float)>>>(d_intermediate, d_in);
 	}
 	else
 	{
-		printf("implement global memory kernel");
-		global_memory_reduce_kernel<<<blocks, threads, threads * sizeof(float)>>>(d_out, d_intermediate);
+		global_memory_reduce_kernel<<<blocks, threads>>>(d_intermediate, d_in);
+	}
+
+	threads = blocks;
+	blocks = 1;
+
+	if (useSharedMemory)
+	{
+		share_memory_reduce_kernel<<<blocks, threads, threads * sizeof(float)>>>(d_out, d_intermediate);
+	}
+	else
+	{
+		global_memory_reduce_kernel<<<blocks, threads>>>(d_out, d_intermediate);
 	}
 }
+
 
 int main(int argc, char **argy)
 {
@@ -101,7 +112,7 @@ int main(int argc, char **argy)
 	for (int i=0; i < ARRAY_SIZE; i++)
 	{
 		//initialization of the array element
-		h_in[i] = float(random()/float(RAND_MAX/2.0f));
+		h_in[i] = -1.0f +  float(random()/float(RAND_MAX/2.0f));
 		sum += h_in[i];
 	}
 
@@ -123,13 +134,14 @@ int main(int argc, char **argy)
 	cudaEvent_t start, stop;
 	cudaEventCreate(&start);
 	cudaEventCreate(&stop);
-
+	
+	printf("Input parameter is %d \n", whichKernel);
 	switch(whichKernel){
 		case 0:
 			printf("Running global reduce \n");
 			cudaEventRecord(start, 0);
 			for (int i=0; i < 100; i++)
-			{
+			{     
 				reduce(d_out, d_intermediate, d_in, ARRAY_SIZE, false);
 			}
 			cudaEventRecord(stop, 0);
@@ -141,8 +153,8 @@ int main(int argc, char **argy)
 				reduce(d_out, d_intermediate, d_in, ARRAY_SIZE, true);
 			}
 		default:
-			printf("error: no kernel is available\n");
-			exit(EXIT_FAILURE);
+			printf("error: Non kernel is available\n");
+			// exit(EXIT_FAILURE);
 
 	}
 	cudaEventSynchronize(stop);
