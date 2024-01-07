@@ -81,7 +81,7 @@ void reduce(float * d_out, float * d_intermediate, float * d_in, int size, bool 
 }
 
 
-int main(int argc, char **argy)
+int main(int argc, char **argv)
 {
 	int deviceCount;
 	cudaGetDeviceCount(&deviceCount);
@@ -128,7 +128,8 @@ int main(int argc, char **argy)
 	int whichKernel = 0;
 	if (argc == 2)
 	{
-		whichKernel = atoi(argy[1]);
+		whichKernel = atoi(argv[1]);
+		printf("Input parameter is %d\n", whichKernel);
 	}
 
 	cudaEvent_t start, stop;
@@ -154,7 +155,7 @@ int main(int argc, char **argy)
 			}
 		default:
 			printf("error: Non kernel is available\n");
-			// exit(EXIT_FAILURE);
+			exit(EXIT_FAILURE);
 
 	}
 	cudaEventSynchronize(stop);
