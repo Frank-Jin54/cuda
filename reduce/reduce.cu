@@ -146,6 +146,7 @@ int main(int argc, char **argv)
 				reduce(d_out, d_intermediate, d_in, ARRAY_SIZE, false);
 			}
 			cudaEventRecord(stop, 0);
+			break;
 		case 1:
 			printf("Runing reduce with shared memory \n");
 			cudaEventRecord(start, 0);
@@ -153,6 +154,8 @@ int main(int argc, char **argv)
 			{
 				reduce(d_out, d_intermediate, d_in, ARRAY_SIZE, true);
 			}
+			cudaEventRecord(stop, 0);
+			break;
 		default:
 			printf("error: Non kernel is available\n");
 			exit(EXIT_FAILURE);
