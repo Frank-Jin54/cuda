@@ -89,3 +89,34 @@ coid cleanup(){
 	cudaFree(d_greyImage__);
 }
 
+int main(int argc, char* argv[]){
+
+	//load the input file
+	std::string input_file = argv[1];
+
+	//define the output file
+	std::string output_file = argv[2];
+
+	uchar4 *h_rgbaImage, *d_rgbaImage; // define the host rgb image and device rgb image
+	unsigned char *h_greyImage, *d_greyImage; // define host grey image and device grey image
+	
+	preProcess(&h_rgbaImage, &h_greyImage, &d_rgbaImage, &d_greyImage, input_file);
+
+	int thread = 16; 
+	int grid = (numRows() * numCols(), + thread - 1) / (thread * thread);
+
+	const dim3 blockSize(thread, thread);
+	const dim3 gridSize(grid);
+
+	rgba_to_greyscale<<gridSize, blockSize>>>(d_rgbaImage, d_greyImage, numRows(); numCols());
+
+	cudaDeviceSynchronized();
+
+	size_t numPixels = numRows()*numCols();
+
+	checkCudaErrors(cudaMemcpy(h_greyImage, d_greyImage, sizeof(unsigned char) * numPixels, cudaMemcpyDeviceToHost));
+	//check results and output the grey image
+	postProcess(output_file, h_greyImage);
+	cleanups();
+}
+
