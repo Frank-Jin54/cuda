@@ -1,10 +1,10 @@
-#include <isostream>
+#include <iostream>
 #include <string>
 #include <cassert>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include <opencv/opencv.hpp>
+#include <opencv2/opencv.hpp>
 
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -20,7 +20,7 @@ uchar4 *d_rgbaImage__;
 unsigned char *d_greyImage__;
 
 size_t numRows(cv::Mat image) {return image.rows;}
-size_t numCols(cv::Mat image) {return image.cols}
+size_t numCols(cv::Mat image) {return image.cols;}
 
 
 template<typename T>
@@ -33,7 +33,7 @@ void check(T err, const char* const func, const chart* const file, const int lin
 	}
 }
 
-void preprocess(uchar4 **inputImage, unsigned char **greyImage, 
+void preProcess(uchar4 **inputImage, unsigned char **greyImage, 
 		uchar4 **d_rgbImage, unsigned char **d_greyImage,
 		const std::string &filename)
 {
@@ -47,14 +47,14 @@ void preprocess(uchar4 **inputImage, unsigned char **greyImage,
 		exit(1);
 	}
 
-	*inputImage = (uchar4 *) imageRGB.ptr <unsigned chart>(0);
+	*inputImage = (uchar4 *) imageRGB.ptr <unsigned char>(0);
 	*greyimage = imageGrey.ptr<unsigned char>(0);
 
 	const size_t numPixels = numRows() * numCols();
 
 	//allocate memory on the GPU for both input and output
 	checkCudaErrors(cudaMalloc(d_rgbaImage, sizeof(uchar4) * numPixels));
-	checkCudaErrors(cudaMalloc(d_greImage, sizeof(unsigned char) ) numPixels));
+	checkCudaErrors(cudaMalloc(d_greImage, sizeof(unsigned char) * numPixels));
 	checkCudaErrors(cudaMemset(*d_greyImage, 0, numPixels * sizeof(unsigned char)));
 
 	//copy input array to the GPU
@@ -83,7 +83,7 @@ void postProcess(const std::string& output_file, unsigned char* data_ptr){
 	cv::imwrit(output_file.c_str(), output);
 }
 
-coid cleanup(){
+void cleanup(){
 	//cleanup
 	cudaFree(d_rgbaImage__);
 	cudaFree(d_greyImage__);
@@ -108,7 +108,7 @@ int main(int argc, char* argv[]){
 	const dim3 blockSize(thread, thread);
 	const dim3 gridSize(grid);
 
-	rgba_to_greyscale<<gridSize, blockSize>>>(d_rgbaImage, d_greyImage, numRows(); numCols());
+	rgba_to_greyscale<<<gridSize, blockSize>>>(d_rgbaImage, d_greyImage, numRows(); numCols());
 
 	cudaDeviceSynchronized();
 
@@ -117,6 +117,6 @@ int main(int argc, char* argv[]){
 	checkCudaErrors(cudaMemcpy(h_greyImage, d_greyImage, sizeof(unsigned char) * numPixels, cudaMemcpyDeviceToHost));
 	//check results and output the grey image
 	postProcess(output_file, h_greyImage);
-	cleanups();
+	cleanup();
 }
 
